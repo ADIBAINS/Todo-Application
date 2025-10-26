@@ -25,7 +25,7 @@ main().then(()=>{
 const cors = require('cors');
 
 app.use(cors({
-    origin: 'https://todo-application-fkggjbpkw-adil-bainss-projects.vercel.app/',
+    origin: 'https://todo-application-fkggjbpkw-adil-bainss-projects.vercel.app',
     credentials: true
 }));
 app.use(express.urlencoded({ extended: true }));
