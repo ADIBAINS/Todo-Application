@@ -12,8 +12,6 @@ const {createTask,updateTaskStatus,updateTaskTitle,usersignup,usersignin} = requ
 const auth = require("../backend/middleware/auth");
 const jwtsec = process.env.JWT_SECRET;
 const cookieParser = require("cookie-parser");
-const ejsMate = require('ejs-mate');
-const path = require("path");
 const mongourl = process.env.MONGO_URL;
 async function main(){
 	await mongoose.connect(mongourl);
@@ -33,9 +31,7 @@ app.use(cors({
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());  
 app.use(cookieParser());
-app.engine('ejs',ejsMate);
-app.set("view engine","ejs");
-app.set("views", path.join(__dirname, "views"));
+
 
 
 app.get("/tasks", auth, async (req,res)=>{
