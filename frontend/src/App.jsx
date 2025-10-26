@@ -33,11 +33,12 @@ export default function TaskApp() {
         setCurrentUser({ email: 'user' });
         setTasks(data.tasks || []);
         setPage('tasks');
-      } else {
-        console.log('Auth check failed:', response.status);
+      } else if (response.status === 401) {
+        // 401 is expected on first load - user not logged in yet
+        setPage('home');
       }
     } catch (err) {
-      console.log('Not authenticated:', err);
+      console.log('Connection error during auth check:', err.message);
       setPage('home');
     }
   };
