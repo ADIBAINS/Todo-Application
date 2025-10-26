@@ -15,7 +15,7 @@ export default function TaskApp() {
   const [signupForm, setSignupForm] = useState({ name: '', email: '', password: '' });
   const [signinForm, setSigninForm] = useState({ email: '', password: '' });
 
-  const API_BASE = 'http://localhost:3000';
+  const API_BASE = 'https://todo-application-hztr.onrender.com';
 
   useEffect(() => {
     checkAuth();
