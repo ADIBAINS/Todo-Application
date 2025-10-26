@@ -29,12 +29,16 @@ export default function TaskApp() {
         headers: { 'Content-Type': 'application/json' }
       });
       if (response.ok) {
+        const data = await response.json();
         setCurrentUser({ email: 'user' });
+        setTasks(data.tasks || []);
         setPage('tasks');
-        fetchTasks();
+      } else {
+        console.log('Auth check failed:', response.status);
       }
     } catch (err) {
       console.log('Not authenticated:', err);
+      setPage('home');
     }
   };
 
