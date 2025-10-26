@@ -26,8 +26,12 @@ const cors = require('cors');
 
 app.use(cors({
     origin: 'https://todo-application-v1-bains.vercel.app',
-    credentials: true
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    maxAge: 86400
 }));
+app.options('*', cors());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());  
 app.use(cookieParser());
