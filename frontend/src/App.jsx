@@ -166,7 +166,7 @@ export default function TaskApp() {
       const data = await response.json();
 
       if (response.ok) {
-        setSuccess('Task created successfully!');
+        setSuccess('Task created!');
         setNewTaskTitle('');
         setTasks([...tasks, data.task]);
         setTimeout(() => setSuccess(''), 2000);
@@ -174,6 +174,7 @@ export default function TaskApp() {
         setError(data.msg || 'Failed to create task');
       }
     } catch (err) {
+      console.error('Create task error:', err);
       setError('Server error: ' + err.message);
     } finally {
       setLoading(false);
@@ -200,7 +201,8 @@ export default function TaskApp() {
         setError('Failed to update task');
       }
     } catch (err) {
-      setError('Failed to update task: ' + err.message);
+      console.error('Update status error:', err);
+      setError('Failed to update task');
     }
   };
 
@@ -231,7 +233,8 @@ export default function TaskApp() {
         setError('Failed to update task');
       }
     } catch (err) {
-      setError('Failed to update task: ' + err.message);
+      console.error('Update title error:', err);
+      setError('Failed to update task');
     }
   };
 
