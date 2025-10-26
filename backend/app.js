@@ -13,6 +13,7 @@ const auth = require("../backend/middleware/auth");
 const jwtsec = process.env.JWT_SECRET;
 const cookieParser = require("cookie-parser");
 const mongourl = process.env.MONGO_URL;
+
 async function main(){
 	await mongoose.connect(mongourl);
 }
@@ -22,8 +23,18 @@ main().then(()=>{
 }).catch((err)=>{
 	console.log(err);
 })
+
 const cors = require('cors');
 
+// Pre-flight handler
+app.options('*', cors({
+    origin: 'https://todo-application-v1-bains.vercel.app',
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// Main CORS middleware
 app.use(cors({
     origin: 'https://todo-application-v1-bains.vercel.app',
     credentials: true,
@@ -31,13 +42,12 @@ app.use(cors({
     allowedHeaders: ['Content-Type', 'Authorization'],
     maxAge: 86400
 }));
-app.options('*', cors());
+
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());  
 app.use(cookieParser());
 
-
-
+// GET tasks - return JSON
 app.get("/tasks", auth, async (req,res)=>{
 	try{
 		const email = req.email;
@@ -45,12 +55,13 @@ app.get("/tasks", auth, async (req,res)=>{
 		if(!user){
 			return res.status(404).json({msg: 'User not found'});
 		}
-		res.render("tasks/tasks.ejs",{tasks : user.tasks});
+		res.json({tasks: user.tasks});
 	}catch(err){
 		res.status(500).json({msg: 'Server error', error: err.message});
 	}
 })
 
+// POST create task
 app.post("/tasks", auth, async (req,res)=>{
 	const createpayload = req.body;
 	const parsepayload = createTask.safeParse(createpayload);
@@ -85,6 +96,7 @@ app.post("/tasks", auth, async (req,res)=>{
 	}
 });
 
+// PUT update task
 app.put("/tasks/:id", auth, async(req,res)=>{
 	try{
 		const {id} = req.params;
@@ -118,6 +130,7 @@ app.put("/tasks/:id", auth, async(req,res)=>{
 	}
 });
 
+// DELETE task
 app.delete("/tasks/:id", auth, async(req,res)=>{
 	try{
 		const {id} = req.params;
@@ -141,9 +154,13 @@ app.delete("/tasks/:id", auth, async(req,res)=>{
 		res.status(500).json({msg: 'Error deleting task', error: err.message});
 	}
 })
-app.get("/signup",async (req,res)=>{
-	res.render("users/signup.ejs");
+
+// GET signup page (optional - you can remove if frontend handles it)
+app.get("/signup", async (req,res)=>{
+	res.json({msg: "Signup endpoint - use POST instead"});
 });
+
+// POST signup
 app.post("/signup", async (req,res)=>{
 	console.log(req.body);
 	const createpayload = req.body;
@@ -175,7 +192,7 @@ app.post("/signup", async (req,res)=>{
 		const token = jwt.sign({email}, jwtsec, {expiresIn: '2d'});
 		res.cookie("token", token, {
     		httpOnly: true,
-    		secure: false,      
+    		secure: true,      // ✅ HTTPS only in production
     		sameSite: "lax",    
     		maxAge: 24 * 60 * 60 * 1000
   		});
@@ -190,9 +207,13 @@ app.post("/signup", async (req,res)=>{
 		});
 	}
 });
-app.get("/signin",async (req,res)=>{
-	res.render("users/signin.ejs");
+
+// GET signin page (optional - you can remove if frontend handles it)
+app.get("/signin", async (req,res)=>{
+	res.json({msg: "Signin endpoint - use POST instead"});
 });
+
+// POST signin
 app.post("/signin", async(req,res)=>{
 	const createpayload = req.body;
 	const parsepayload = usersignin.safeParse(createpayload);
@@ -220,7 +241,7 @@ app.post("/signin", async(req,res)=>{
 		const token = jwt.sign({email}, jwtsec, {expiresIn: '2d'});
 		res.cookie("token", token, {
     		httpOnly: true,
-    		secure: false,      
+    		secure: true,      // ✅ HTTPS only in production
     		sameSite: "lax",    
     		maxAge: 24 * 60 * 60 * 1000
   		});
@@ -235,8 +256,8 @@ app.post("/signin", async(req,res)=>{
 	}
 })
 
-
-app.get("/signout",(req,res)=>{
+// GET signout
+app.get("/signout", (req,res)=>{
 	res.clearCookie("token");
 	res.json({
 		msg:"Successfully Logged Out"
