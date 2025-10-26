@@ -1,40 +1,33 @@
 if (process.env.NODE_ENV != "production"){
     require('dotenv').config();
 }
+
 const express = require("express");
-const app = express();
-const port = 3000;
+const cors = require('cors');
+const cookieParser = require("cookie-parser");
 const jwt = require('jsonwebtoken');
 const mongoose = require("mongoose");
+
 const Task = require("../backend/models/taskSchema");
 const User = require("../backend/models/userSchema");
-const {createTask,updateTaskStatus,updateTaskTitle,usersignup,usersignin} = require("../backend/types");
+const {createTask, updateTaskStatus, updateTaskTitle, usersignup, usersignin} = require("../backend/types");
 const auth = require("../backend/middleware/auth");
+
+const app = express();
+const port = process.env.PORT || 3000;
 const jwtsec = process.env.JWT_SECRET;
-const cookieParser = require("cookie-parser");
 const mongourl = process.env.MONGO_URL;
 
+// Database connection
 async function main(){
 	await mongoose.connect(mongourl);
 }
 
-main().then(()=>{
-	console.log("Connection Established");
-}).catch((err)=>{
-	console.log(err);
-})
+main()
+	.then(() => console.log("✓ MongoDB Connection Established"))
+	.catch((err) => console.error("✗ MongoDB Connection Error:", err.message));
 
-const cors = require('cors');
-
-// Pre-flight handler
-app.options('/.*/', cors({
-    origin: 'https://todo-application-v1-bains.vercel.app',
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));
-
-// Main CORS middleware
+// Middleware - Order matters!
 app.use(cors({
     origin: 'https://todo-application-v1-bains.vercel.app',
     credentials: true,
@@ -44,40 +37,49 @@ app.use(cors({
 }));
 
 app.use(express.urlencoded({ extended: true }));
-app.use(express.json());  
+app.use(express.json());
 app.use(cookieParser());
 
-// GET tasks - return JSON
-app.get("/tasks", auth, async (req,res)=>{
+// Health check (no auth required)
+app.get("/health", (req, res) => {
+	res.json({msg: "✓ Server is running"});
+});
+
+// ============ TASK ROUTES ============
+
+// GET all tasks
+app.get("/tasks", auth, async (req, res) => {
 	try{
 		const email = req.email;
 		const user = await User.findOne({email}).populate('tasks');
+		
 		if(!user){
 			return res.status(404).json({msg: 'User not found'});
 		}
+		
 		res.json({tasks: user.tasks});
 	}catch(err){
+		console.error("GET /tasks error:", err.message);
 		res.status(500).json({msg: 'Server error', error: err.message});
 	}
-})
+});
 
 // POST create task
-app.post("/tasks", auth, async (req,res)=>{
-	const createpayload = req.body;
-	const parsepayload = createTask.safeParse(createpayload);
-	
-	if(!parsepayload.success){
-		return res.status(400).json({msg: 'Invalid Data Entry', errors: parsepayload.error});
-	}
-	
+app.post("/tasks", auth, async (req, res) => {
 	try{
-		const task_name = req.body.title;
-		const status = req.body.status || false;
+		const createpayload = req.body;
+		const parsepayload = createTask.safeParse(createpayload);
+		
+		if(!parsepayload.success){
+			return res.status(400).json({msg: 'Invalid Data Entry', errors: parsepayload.error});
+		}
+		
+		const {title, status} = req.body;
 		const email = req.email;
 		
 		const task = new Task({
-			title: task_name,
-			status: status,
+			title: title,
+			status: status || false,
 		});
 		
 		await task.save();
@@ -92,12 +94,13 @@ app.post("/tasks", auth, async (req,res)=>{
 		
 		res.status(201).json({msg: "Task created successfully", task});
 	}catch(err){
+		console.error("POST /tasks error:", err.message);
 		res.status(500).json({msg: 'Error creating task', error: err.message});
 	}
 });
 
 // PUT update task
-app.put("/tasks/:id", auth, async(req,res)=>{
+app.put("/tasks/:id", auth, async (req, res) => {
 	try{
 		const {id} = req.params;
 		const {title, status} = req.body;
@@ -126,15 +129,16 @@ app.put("/tasks/:id", auth, async(req,res)=>{
 		await task.save();
 		res.json({msg: 'Task updated successfully', task});
 	}catch(err){
+		console.error("PUT /tasks/:id error:", err.message);
 		res.status(500).json({msg: 'Error updating task', error: err.message});
 	}
 });
 
 // DELETE task
-app.delete("/tasks/:id", auth, async(req,res)=>{
+app.delete("/tasks/:id", auth, async (req, res) => {
 	try{
 		const {id} = req.params;
-		const email = req.email; 
+		const email = req.email;
 		
 		const user = await User.findOne({email});
 		if(!user){
@@ -151,29 +155,26 @@ app.delete("/tasks/:id", auth, async(req,res)=>{
 		
 		res.json({msg: 'Task deleted successfully', task: deltask});
 	}catch(err){
+		console.error("DELETE /tasks/:id error:", err.message);
 		res.status(500).json({msg: 'Error deleting task', error: err.message});
 	}
-})
-
-// GET signup page (optional - you can remove if frontend handles it)
-app.get("/signup", async (req,res)=>{
-	res.json({msg: "Signup endpoint - use POST instead"});
 });
 
+// ============ AUTH ROUTES ============
+
 // POST signup
-app.post("/signup", async (req,res)=>{
-	console.log(req.body);
-	const createpayload = req.body;
-	const parsepayload = usersignup.safeParse(createpayload);
-	
-	if(!parsepayload.success){
-		return res.status(400).json({
-			msg: "Invalid Request",
-			errors: parsepayload.error
-		});
-	}
-	
+app.post("/signup", async (req, res) => {
 	try{
+		const createpayload = req.body;
+		const parsepayload = usersignup.safeParse(createpayload);
+		
+		if(!parsepayload.success){
+			return res.status(400).json({
+				msg: "Invalid Request",
+				errors: parsepayload.error
+			});
+		}
+		
 		const {name, email, password} = req.body;
 		
 		const userexists = await User.findOne({email});
@@ -192,15 +193,14 @@ app.post("/signup", async (req,res)=>{
 		const token = jwt.sign({email}, jwtsec, {expiresIn: '2d'});
 		res.cookie("token", token, {
     		httpOnly: true,
-    		secure: true,      // ✅ HTTPS only in production
-    		sameSite: "lax",    
+    		secure: true,
+    		sameSite: "lax",
     		maxAge: 24 * 60 * 60 * 1000
   		});
 		
-		res.status(201).json({
-			msg: "User created successfully"
-		});
+		res.status(201).json({msg: "User created successfully"});
 	}catch(err){
+		console.error("POST /signup error:", err.message);
 		res.status(500).json({
 			msg: "Server error",
 			error: err.message
@@ -208,24 +208,19 @@ app.post("/signup", async (req,res)=>{
 	}
 });
 
-// GET signin page (optional - you can remove if frontend handles it)
-app.get("/signin", async (req,res)=>{
-	res.json({msg: "Signin endpoint - use POST instead"});
-});
-
 // POST signin
-app.post("/signin", async(req,res)=>{
-	const createpayload = req.body;
-	const parsepayload = usersignin.safeParse(createpayload);
-	
-	if(!parsepayload.success){
-		return res.status(400).json({
-			msg: 'Invalid email format',
-			errors: parsepayload.error
-		});
-	}
-	
+app.post("/signin", async (req, res) => {
 	try{
+		const createpayload = req.body;
+		const parsepayload = usersignin.safeParse(createpayload);
+		
+		if(!parsepayload.success){
+			return res.status(400).json({
+				msg: 'Invalid email format',
+				errors: parsepayload.error
+			});
+		}
+		
 		const {email, password} = req.body;
 		
 		const user = await User.findOne({email});
@@ -241,29 +236,28 @@ app.post("/signin", async(req,res)=>{
 		const token = jwt.sign({email}, jwtsec, {expiresIn: '2d'});
 		res.cookie("token", token, {
     		httpOnly: true,
-    		secure: true,      // ✅ HTTPS only in production
-    		sameSite: "lax",    
+    		secure: true,
+    		sameSite: "lax",
     		maxAge: 24 * 60 * 60 * 1000
   		});
-		res.json({
-			msg: "Login successful"
-		});
+		
+		res.json({msg: "Login successful"});
 	}catch(err){
+		console.error("POST /signin error:", err.message);
 		res.status(500).json({
 			msg: "Server error",
 			error: err.message
 		});
 	}
-})
+});
 
 // GET signout
-app.get("/signout", (req,res)=>{
+app.get("/signout", (req, res) => {
 	res.clearCookie("token");
-	res.json({
-		msg:"Successfully Logged Out"
-	});
-})
+	res.json({msg: "Successfully Logged Out"});
+});
 
-app.listen(port, ()=>{
-	console.log(`The Server is up on Port : ${port}`);
+// Start server
+app.listen(port, () => {
+	console.log(`✓ Server running on port ${port}`);
 });
