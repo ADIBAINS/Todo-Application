@@ -24,7 +24,9 @@ export default function TaskApp() {
   const checkAuth = async () => {
     try {
       const response = await fetch(`${API_BASE}/tasks`, {
+        method: 'GET',
         credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
       });
       if (response.ok) {
         setCurrentUser({ email: 'user' });
@@ -32,7 +34,7 @@ export default function TaskApp() {
         fetchTasks();
       }
     } catch (err) {
-      console.log('Not authenticated');
+      console.log('Not authenticated:', err);
     }
   };
 
@@ -40,13 +42,20 @@ export default function TaskApp() {
     try {
       setLoading(true);
       const response = await fetch(`${API_BASE}/tasks`, {
+        method: 'GET',
         credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
       });
+      
       if (response.ok) {
-        const html = await response.text();
-        setTasks([]);
+        const data = await response.json();
+        setTasks(data.tasks || []);
+      } else if (response.status === 401) {
+        setPage('home');
+        setCurrentUser(null);
       }
     } catch (err) {
+      console.error('Failed to fetch tasks:', err);
       setError('Failed to fetch tasks');
     } finally {
       setLoading(false);
@@ -183,9 +192,11 @@ export default function TaskApp() {
         setTasks(updatedTasks);
         setSuccess('Task updated!');
         setTimeout(() => setSuccess(''), 2000);
+      } else {
+        setError('Failed to update task');
       }
     } catch (err) {
-      setError('Failed to update task');
+      setError('Failed to update task: ' + err.message);
     }
   };
 
@@ -212,9 +223,11 @@ export default function TaskApp() {
         setEditingTitle('');
         setSuccess('Task updated!');
         setTimeout(() => setSuccess(''), 2000);
+      } else {
+        setError('Failed to update task');
       }
     } catch (err) {
-      setError('Failed to update task');
+      setError('Failed to update task: ' + err.message);
     }
   };
 
@@ -225,22 +238,27 @@ export default function TaskApp() {
       const response = await fetch(`${API_BASE}/tasks/${id}`, {
         method: 'DELETE',
         credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
       });
 
       if (response.ok) {
         setTasks(tasks.filter(task => task._id !== id));
         setSuccess('Task deleted!');
         setTimeout(() => setSuccess(''), 2000);
+      } else {
+        setError('Failed to delete task');
       }
     } catch (err) {
-      setError('Failed to delete task');
+      setError('Failed to delete task: ' + err.message);
     }
   };
 
   const handleLogout = async () => {
     try {
       await fetch(`${API_BASE}/signout`, {
+        method: 'GET',
         credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
       });
       setCurrentUser(null);
       setTasks([]);
@@ -248,7 +266,7 @@ export default function TaskApp() {
       setSuccess('Logged out successfully!');
       setTimeout(() => setSuccess(''), 2000);
     } catch (err) {
-      setError('Logout failed');
+      setError('Logout failed: ' + err.message);
     }
   };
 
