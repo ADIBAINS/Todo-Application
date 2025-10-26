@@ -14,8 +14,9 @@ const jwtsec = process.env.JWT_SECRET;
 const cookieParser = require("cookie-parser");
 const ejsMate = require('ejs-mate');
 const path = require("path");
+const mongourl = process.env.MONGO_URL;
 async function main(){
-	await mongoose.connect("mongodb+srv://bains_adi:OgaQkxXkdU8oV7LK@cluster0.gsrnb9q.mongodb.net/practise");
+	await mongoose.connect(mongourl);
 }
 
 main().then(()=>{
